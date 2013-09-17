@@ -994,7 +994,7 @@ AROMA_CRMAV2_toTAPS <- function(CEL_directory=getwd(), poolRef=TRUE) {
   ## Run this function from within the folder with the CEL files (or specify the folder as argument).
   ## Sample set average will be used as reference, to run without reference add argument poolRef=FALSE.
   ## Subfolder will be made with TAPS-compatible data. Once this function is finished,
-  ## go ahead with TAPS_plot().
+  ## go ahead with AROMA_TAPS_plot().
   
   library("aroma.affymetrix")
   
