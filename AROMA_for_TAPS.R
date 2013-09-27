@@ -71,7 +71,6 @@ AROMA_TAPS_plot <- function(directory=getwd(),xlim=c(-1,2),ylim=c(0,1),minseg=1,
     alf <- readAlf() 										## Allele Frequency
     segments <- readSegments() 								## segments if available (CBS recommended)
     
-    
     segments$Value <- segments$Value-median(Log2$Value) 	## Median-centering
     Log2$Value <- Log2$Value-median(Log2$Value) 			## Median-centering
     
@@ -1020,8 +1019,6 @@ AROMA_CRMAV2_toTAPS <- function(CEL_directory=getwd(), poolRef=TRUE) {
   options(digits=4)
   cdf <- AffymetrixCdfFile$byChipType(chipType, tags="Full")
   gi <- getGenomeInformation(cdf)
-  
-  
   si <- getSnpInformation(cdf)
   
   acs <- AromaCellSequenceFile$byChipType(getChipType(cdf, fullname=FALSE))
