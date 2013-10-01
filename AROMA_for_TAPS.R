@@ -66,7 +66,7 @@ AROMA_TAPS_plot <- function(directory=getwd(),xlim=c(-1,2),ylim=c(0,1),minseg=1,
     setwd(subs[i])
     name <- subs[i]
     cat(' ..loading', subs[i])
-    Log2 <- readLog2() 										## Log-R
+    Log2 <- AROMA_readLog2() 										## Log-R
     
     alf <- readAlf() 										## Allele Frequency
     segments <- readSegments() 								## segments if available (CBS recommended)
@@ -76,21 +76,21 @@ AROMA_TAPS_plot <- function(directory=getwd(),xlim=c(-1,2),ylim=c(0,1),minseg=1,
     
     cat(' ..processing')
     if (is.null(segments)) { 								## segmentation using DNA-copy if needed (must then be installed)
-      segments <- segment_DNAcopy(Log2)
+      segments <- AROMA_segment_DNAcopy(Log2)
       save.txt(segments,'_segments.txt') 
     }
     
     allRegions <- makeRegions(Log2, alf, segments)			## Calculates necessary data for segments (all functions are in this file)
     save(allRegions,file='allRegions.Rdata')
-    regs <- regsFromSegs(Log2,alf,segments,bin=bin,min=5)	## Calculates the same data for shortened segments, very useful for visualization
+    regs <- AROMA_regsFromSegs(Log2,alf,segments,bin=bin,min=5)	## Calculates the same data for shortened segments, very useful for visualization
     
-    #scatterPlot_sample(allRegions$regions,xlim=xlim,ylim=ylim,name=name,minseg=minseg,cn=F) ## a scatter plot of the whole sample
+    #AROMA_scatterPlot_sample(allRegions$regions,xlim=xlim,ylim=ylim,name=name,minseg=minseg,cn=F) ## a scatter plot of the whole sample
     
     sampleInfo <- NULL
     #try( sampleInfo <- load.txt('sampleInfo_TAPS.txt'), silent=T ) ## if sampleInfo is already in the folder, no estimate is made.
     cat('..estimating ')
     if (is.null(sampleInfo)) {
-      try( sampleInfo <- getEstimates(Log2,alf,allRegions$regions), silent=T) ## Estimates the Log-R of copy number 2 and the difference to a deletion or amplification
+      try( sampleInfo <- AROMA_getEstimates(Log2,alf,allRegions$regions), silent=T) ## Estimates the Log-R of copy number 2 and the difference to a deletion or amplification
     }
     if (is.null(sampleInfo)) { 
       sampleInfo <- data.frame('cn2'=0,'delta'=0.4)			## Default if the estimation fails
@@ -101,24 +101,24 @@ AROMA_TAPS_plot <- function(directory=getwd(),xlim=c(-1,2),ylim=c(0,1),minseg=1,
     
     cat('copy numbers')
     t <- NULL
-    try (t <- findCNs(Log2,alf,allRegions,dmin=0.9,maxCn=maxCn,ceiling=1,shift=sampleInfo$cn2,delta=sampleInfo$delta), silent=T) ## estimates the Log-R and Allelic Imbalance Ration of all variants up to maxCn
+    try (t <- AROMA_findCNs(Log2,alf,allRegions,dmin=0.9,maxCn=maxCn,ceiling=1,shift=sampleInfo$cn2,delta=sampleInfo$delta), silent=T) ## estimates the Log-R and Allelic Imbalance Ration of all variants up to maxCn
     
     try ( if (!is.null(t)) {
-      u <- setCNs(allRegions,t$int,t$ai,maxCn)				## Assigns copy number variant for all segments
+      u <- AROMA_setCNs(allRegions,t$int,t$ai,maxCn)				## Assigns copy number variant for all segments
       allRegions$regions <- u$regions				
       cn <- T
     }else cn <- F , silent=T)
     
     cat('..plotting.\n')
-    scatterPlot_sample(allRegions$regions,t$int,t$ai,xlim=xlim,ylim=ylim,name=name,minseg=minseg,cn=cn) ## whole-sample plot visualizing TAPS' estimates.
-    for (chr in 1:23) chromPlot_short(chr, Log2, alf, regs, xlim,ylim,name)				## Chromosome-wise plots for manual analysis
+    AROMA_scatterPlot_sample(allRegions$regions,t$int,t$ai,xlim=xlim,ylim=ylim,name=name,minseg=minseg,cn=cn) ## whole-sample plot visualizing TAPS' estimates.
+    for (chr in 1:23) AROMA_chromPlot_short(chr, Log2, alf, regs, xlim,ylim,name)				## Chromosome-wise plots for manual analysis
     cat('..done\n')
     setwd('..')
   }
 }
 ###
-TAPS_call <- function(directory=getwd(),xlim=c(-1,1),ylim=c(0,1),minseg=0.2,maxCn=10) {
-  ## TAPS_call outputs the total and minor allele copy numbers of all segments as a text file, and as images for visual confirmation.
+AROMA_TAPS_call <- function(directory=getwd(),xlim=c(-1,1),ylim=c(0,1),minseg=0.2,maxCn=10) {
+  ## AROMA_TAPS_call outputs the total and minor allele copy numbers of all segments as a text file, and as images for visual confirmation.
   ## sampleInfo_TAPS.txt must be present in each sample folder. If TAPS_plot could not make a good guess of the Log-R of copy number 2 
   ## and the Log-R difference to a deletion, you must interpret the scatter plots and edit sampleInfo_TAPS.txt.
   setwd(directory)
@@ -131,7 +131,7 @@ TAPS_call <- function(directory=getwd(),xlim=c(-1,1),ylim=c(0,1),minseg=0.2,maxC
     setwd(subs[i])
     name <- subs[i]
     cat(' ..loading', subs[i])
-    Log2 <- readLog2()
+    Log2 <- AROMA_readLog2()
     alf <- readAlf(localDir)
     segments <- readSegments()
     
@@ -143,22 +143,23 @@ TAPS_call <- function(directory=getwd(),xlim=c(-1,1),ylim=c(0,1),minseg=0.2,maxC
     load('allRegions.Rdata')							## These were prepared in TAPS_plot
     #allRegions <- makeRegions(Log2, alf, segments)
     
-    
+    ## TODO: Figure out why the following line is trying to load a file that doesn't exist. DCW
     sampleInfo <- load.txt('sampleInfo_TAPS.txt')		## The basis for TAPS copy number analysis
-    t <- findCNs(Log2,alf,allRegions,dmin=0.9,maxCn=maxCn,ceiling=1,shift=sampleInfo$cn2,delta=sampleInfo$delta) ## estimates the Log-R and Allelic Imbalance Ration of all variants up to maxCn
     
-    u <- setCNs(allRegions,t$int,t$ai,maxCn)			## Assigns copy number variant for all segments
+    t <- AROMA_findCNs(Log2,alf,allRegions,dmin=0.9,maxCn=maxCn,ceiling=1,shift=sampleInfo$cn2,delta=sampleInfo$delta) ## estimates the Log-R and Allelic Imbalance Ration of all variants up to maxCn
+    
+    u <- AROMA_setCNs(allRegions,t$int,t$ai,maxCn)			## Assigns copy number variant for all segments
     allRegions$regions <- u$regions
     save.txt(u$merged,file=paste(name,'_segmentCN_merged.txt',sep='')) ## adjacent segments with idendical copy number are merged (except over centromere) and all are saved to a text file
     
-    scatterPlot_sample(u$regions,t$int,t$ai,xlim=xlim,ylim=ylim,name=name,minseg=minseg,cn=T) ## This plot is saved, marked with TAPS interpretaion of copy number variants. Used for visual quality check.
-    for (chr in 1:23) scatterChromPlot_Sample(allRegions,Log2,alf,chr,xlim,ylim,name,minseg=5,maxCn=maxCn,width=700,height=1200) # Chromosome-wise plot of all segments with their copy number calls. Used for a vusual quality check.
+    AROMA_scatterPlot_sample(u$regions,t$int,t$ai,xlim=xlim,ylim=ylim,name=name,minseg=minseg,cn=T) ## This plot is saved, marked with TAPS interpretaion of copy number variants. Used for visual quality check.
+    for (chr in 1:23) AROMA_scatterChromPlot_Sample(allRegions,Log2,alf,chr,xlim,ylim,name,minseg=5,maxCn=maxCn,width=700,height=1200) # Chromosome-wise plot of all segments with their copy number calls. Used for a vusual quality check.
     cat('..done\n')
     setwd('..')
   }
 }
 ###
-TAPS_short <- function(directory=getwd(),xlim=c(-1,1),ylim=c(0,1)) {
+AROMA_TAPS_short <- function(directory=getwd(),xlim=c(-1,1),ylim=c(0,1)) {
   ## This function is currently not in use.  	
   setwd(directory)
   subs <- getSubdirs()
@@ -170,24 +171,24 @@ TAPS_short <- function(directory=getwd(),xlim=c(-1,1),ylim=c(0,1)) {
     setwd(subs[i])
     name <- subs[i]
     cat(' ..loading', subs[i])
-    Log2 <- readLog2()
+    Log2 <- AROMA_readLog2()
     alf <- readAlf(localDir)
     segments <- readSegments()
     cat(' ..processing.\n')
     if (is.null(segments)) {
-      segments <- segment_DNAcopy(Log2)
+      segments <- AROMA_segment_DNAcopy(Log2)
       save.txt(segments,'segments.txt')
     }
-    regs <- regsFromSegs(Log2,alf,segments,bin=500,min=1)
+    regs <- AROMA_regsFromSegs(Log2,alf,segments,bin=500,min=1)
     for (chr in 1:24) {
-      chromPlot_short(chr, Log2, alf, regs, name)
+      AROMA_chromPlot_short(chr, Log2, alf, regs, name)
     }
     cat('..done\n')
     setwd('..')
   }
 }
 ###
-scatterPlot_sample <- function(regions,int=NULL,ai=NULL,xlim,ylim,name,minseg,cn=F) {
+AROMA_scatterPlot_sample <- function(regions,int=NULL,ai=NULL,xlim,ylim,name,minseg,cn=F) {
   ## TAPS scatter plot of a full sample, used for visual quality control. 
   library(ggplot2)
   regions <- regions[!is.na(regions$imba),]		## Avoids segments that could not be given an Allelic Imbalance Ratio (normally due to having no or almost no SNPs)
@@ -222,7 +223,7 @@ scatterPlot_sample <- function(regions,int=NULL,ai=NULL,xlim,ylim,name,minseg,cn
   }
 }
 ###
-scatterChromPlot_Sample <- function (allRegions,Log2,alf,chr,xlim,ylim,name,minseg=3,maxCn=12,width=800,height=1000) {
+AROMA_scatterChromPlot_Sample <- function (allRegions,Log2,alf,chr,xlim,ylim,name,minseg=3,maxCn=12,width=800,height=1000) {
   ## This function builds a TAPS result image of one chromosome. Containing scatter plot, copy number estimates, Log-Ratio and Allele frequency-
   regions <- allRegions$regions						## (allRegions also contains pointers to Log-R and allele frequency of segments)
   regions$imba[regions$lengthMB<minseg] <- NA		## If requested, excludes some very short regions from being plotted
@@ -290,7 +291,7 @@ scatterChromPlot_Sample <- function (allRegions,Log2,alf,chr,xlim,ylim,name,mins
   dev.off()
 }
 ###
-chromPlot_short <- function(chr, Log2, alf, regs, xlim=c(-1.2,1.2),ylim=0:1,name='noname') {
+AROMA_chromPlot_short <- function(chr, Log2, alf, regs, xlim=c(-1.2,1.2),ylim=0:1,name='noname') {
   ## This function is very similar to the one above, except it does not plot copy numbers (they arent known yet), and it uses short
   ## segments that are better suited to a) figure out the sample-specific relationship between Log-R, Allelic Imbalance Ratio and 
   ## allele-specific copy numbers and b) see if segmentation has failed for copy number changes that do not affect total copy number.
@@ -335,7 +336,7 @@ chromPlot_short <- function(chr, Log2, alf, regs, xlim=c(-1.2,1.2),ylim=0:1,name
   dev.off()
 }
 ###
-regsFromSegs <- function (Log2,alf, segments, bin=200,min=1) {
+AROMA_regsFromSegs <- function (Log2,alf, segments, bin=200,min=1) {
   ## This function builds short segments and calcualtes their average Log-R and Allelic Imbalance Ratio.
   rownames(Log2)=1:nrows(Log2)
   rownames(alf)=1:nrows(alf)
@@ -389,7 +390,7 @@ regsFromSegs <- function (Log2,alf, segments, bin=200,min=1) {
   return (regs)
 }
 ###
-segment_DNAcopy <- function(Log2) {
+AROMA_segment_DNAcopy <- function(Log2) {
   ## If segmentation is required, DNAcopy is a good choice. Must be installed. 
   library(DNAcopy)
   cat('Using DNAcopy to create segments:\n')
@@ -409,7 +410,7 @@ segment_DNAcopy <- function(Log2) {
   return(segs[,2:6]) 
 }
 ###
-readLog2 <- function() {
+AROMA_readLog2 <- function() {
   ## This function reads Log-ratio from the file "probes.txt" which must be present in the current directory.
   Log2=NULL
   try( Log2 <- read.csv(file='probes.txt',header=T,sep='\t'), silent=T)
@@ -604,20 +605,20 @@ mySorter <- function(data) {
   return (temp)
 }
 ###
-probesInRegions <- function(regions,probes) {
-  ## This function is not in use.
-  rchr=as.character(regions$Chromosome)
-  pchr=as.character(probes$Chr)
-  nprobes=0
-  
-  for (i in 1:length(rchr)) {
-    t=strsplit(rchr[i],'chr')[[1]][2]
-    here=probes[(t==pchr),] #finding probe subset on this chr
-    matching=(here$Position>=regions$Start[i]) & (here$Position<=regions$End[i])
-    nprobes[i]=sum(matching)
-  }
-  return(nprobes)
-}
+# probesInRegions <- function(regions,probes) {
+#   ## This function is not in use.
+#   rchr=as.character(regions$Chromosome)
+#   pchr=as.character(probes$Chr)
+#   nprobes=0
+#   
+#   for (i in 1:length(rchr)) {
+#     t=strsplit(rchr[i],'chr')[[1]][2]
+#     here=probes[(t==pchr),] #finding probe subset on this chr
+#     matching=(here$Position>=regions$Start[i]) & (here$Position<=regions$End[i])
+#     nprobes[i]=sum(matching)
+#   }
+#   return(nprobes)
+# }
 ###
 getOverlap <- function(s1,e1,s2,e2) { ## This is not currently used anywhere - it is destined for group studies and pileups.
   return(max((min(e1,e2)-max(s1,s2)),0))
@@ -633,19 +634,19 @@ weightedMean <- function(data,weights) {
   return (mean(rep(data,weights)))
 }
 ###
-myMeans <- function(data,k) { ## Not currently used
-  best <- 0
-  clus <- list()
-  for (i in 1:10) {
-    clus[[1]] <- kmeans(data,k)
-    var <- var(clus[[1]]$centers)
-    if (var>best) {
-      ix <- i
-      best <- var
-    }
-  }
-  return (clus[[ix]])
-}
+# myMeans <- function(data,k) { ## Not currently used
+#   best <- 0
+#   clus <- list()
+#   for (i in 1:10) {
+#     clus[[1]] <- kmeans(data,k)
+#     var <- var(clus[[1]]$centers)
+#     if (var>best) {
+#       ix <- i
+#       best <- var
+#     }
+#   }
+#   return (clus[[ix]])
+# }
 is.even <- function(data) {
   return (trunc(data/2)*2 == data)
 }
@@ -663,7 +664,7 @@ is.autosome <- function(vector) {
 }
 
 ## 
-getEstimates <- function(Log2,alf,regions) {
+AROMA_getEstimates <- function(Log2,alf,regions) {
   ## This function is called to figure out copy number two and the distance to copy number 1 or 3. Curently rather stable unless 
   ## a) normal cn2 (copy-number-two) is missing or b) sample is tetraploid+ or c) Normal cell content is very high.
   ## Therefore inspection/correction of estimates is NECESSARY before proceeding with TAPS_call. 
@@ -694,7 +695,7 @@ getEstimates <- function(Log2,alf,regions) {
   return (data.frame('cn2'=median,'delta'=median-median_low)) ## default.
 }
 ###
-findCNs <- function(Log2,alf,allRegions,name=thisSubdir(),dmin=0.9,maxCn=10,ceiling=1,shift=NULL,delta=NULL) {
+AROMA_findCNs <- function(Log2,alf,allRegions,name=thisSubdir(),dmin=0.9,maxCn=10,ceiling=1,shift=NULL,delta=NULL) {
   ## This function takes an estimate of the Log-R of copy number two (shift) and the difference in log-R between copy numbers 2 and 1 (delta)
   ## (3 and 2 works too). Then, the Log-R and Allelic Imbalance Ratio of all possible copy number variants up to maxCn are estimated from
   ## the Log-R and Allelic Imbalance Ratio of all the segments. This function will NOT be useful unless there is already a solid estimate 
@@ -914,7 +915,7 @@ findCNs <- function(Log2,alf,allRegions,name=thisSubdir(),dmin=0.9,maxCn=10,ceil
   return(list('int'=int,'ai'=ai))
 }
 ###
-setCNs <- function(allRegions,int,ai,maxCn=12) {
+AROMA_setCNs <- function(allRegions,int,ai,maxCn=12) {
   ##  Assign total and minor copy numbers to all segments.
   regions <- allRegions$regions[,-4]	## This time, work on all segments available.
   
